@@ -3,19 +3,23 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def plot_event(X, Y, labels, elev=20, azim=20, img_size=5, dataset=None):
-    nevents = len(X)
+    events = len(X)
 
     # start plot
-    fig = plt.figure(figsize=(nevents * 18, nevents * 17))
+    fig = plt.figure(figsize=(events * 18, events * 17))
     fig.patch.set_facecolor('white')
 
     color = np.array(['#7A88CCC0'])
     edgecolor = '1.0'
 
-    for event in range(nevents):
+    for event in range(events):
         x = X[event].reshape(img_size, img_size, img_size)
         y = Y[event].reshape(img_size, img_size, img_size)
+
+        x[x < dataset.min_charge] = 0
+        y[y < dataset.min_charge] = 0
 
         # fill the detector with reco hits
         detector1 = np.zeros((5, 5, 5), dtype=bool)
@@ -38,7 +42,7 @@ def plot_event(X, Y, labels, elev=20, azim=20, img_size=5, dataset=None):
 
         to_plot = [x, y]
         for i in range(len(to_plot)):
-            ax = fig.add_subplot(nevents, nevents, i * nevents + event + 1, projection='3d')
+            ax = fig.add_subplot(events, events, i * events + event + 1, projection='3d')
 
             # voxels volume
             sc = ax.voxels(to_plot[i], facecolors=colors1, edgecolor=edgecolor, alpha=1.0)
@@ -76,4 +80,52 @@ def plot_event(X, Y, labels, elev=20, azim=20, img_size=5, dataset=None):
     cbar.set_label('# of p.e.', rotation=90, labelpad=19, fontsize=40)
     cbar.ax.tick_params(labelsize=35)
 
+    plt.show()
+
+
+def plot_scatter(true, pred, label=None, s=0.01, fontsize=15):
+    diff = pred - true
+    textstr = '\n'.join((
+        r'$\mu \ (reco-true)=%.2f$' % (diff.mean(),),
+        r'$\sigma \ (reco-true)=%.2f$' % (diff.std(),)))
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    plt.scatter(true, pred, s=s)
+    plt.xlabel("{0}{1}{2}".format(label[0], "$_{true}$", label[1]), fontsize=fontsize)
+    plt.ylabel("{0}{1}{2}".format(label[0], "$_{reco}$", label[1]), fontsize=fontsize)
+    plt.text(0.15, 0.84, textstr, transform=plt.gcf().transFigure, fontsize=14,
+             verticalalignment='top', bbox=props)
+    plt.grid()
+    plt.show()
+
+
+def plot_scatter_len(true, pred, label=None, s=0.01, fontsize=15):
+    diff = pred
+    textstr = '\n'.join((
+        r'$\mu \ (reco-true)=%.2f$' % (diff.mean(),),
+        r'$\sigma \ (reco-true)=%.2f$' % (diff.std(),)))
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    plt.scatter(true, pred, s=s)
+    plt.xlabel("particle length [mm]", fontsize=fontsize)
+    plt.ylabel("{0}{1}{2}".format(label[0], "$_{reco-true}$", label[1]), fontsize=fontsize)
+    plt.text(0.15, 0.84, textstr, transform=plt.gcf().transFigure, fontsize=14,
+             verticalalignment='top', bbox=props)
+    plt.grid()
+    plt.show()
+
+
+def plot_hist(x, xlim, label=None):
+    x = x[x <= xlim]
+    textstr = '\n'.join((
+        r'$\mu=%.2f$' % (x.mean(),),
+        r'$\sigma=%.2f$' % (x.std(),)))
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    plt.hist(x, bins=100, color="cornflowerblue")
+    plt.ylabel("frequency", fontsize=15)
+    plt.xlabel(label, fontsize=15)
+    plt.xlim(0, xlim)
+    plt.yscale("log")
+    plt.ylim(1, 40000)
+    plt.yticks((1, 10, 100, 1000, 10000))
+    plt.text(0.71, 0.84, textstr, transform=plt.gcf().transFigure, fontsize=14,
+             verticalalignment='top', bbox=props)
     plt.show()
