@@ -92,6 +92,40 @@ class VAdatasetDecoder(Dataset):
 
         return img_batch, ini_pos, params_batch, is_next_batch
 
+    def collate_fn2(self, batch):
+        img_batch, ini_pos, params_batch, is_next_batch, lens_batch = [], [], [], [], []
+
+        for event in batch:
+            if event['images'] is None:
+                continue
+
+            charge_sum = event['images'].sum(0)
+            indexes = np.where(charge_sum)
+            charges = charge_sum[indexes].reshape(-1, 1)
+            indexes = np.stack(indexes, axis=1)
+            image = torch.tensor(np.concatenate((indexes, charges), axis=1))
+            pos_ini = torch.tensor(event['ini_pos'])
+            params = torch.tensor(event['params'])
+            lens = torch.tensor(event['lens'])
+            is_next = torch.ones(size=(params.shape[0],))
+            is_next[-1] = 0
+
+            img_batch.append(image)
+            ini_pos.append(pos_ini)
+            params_batch.append(params)
+            is_next_batch.append(is_next)
+            lens_batch.append(lens)
+
+        assert len(img_batch) > 0
+
+        img_batch = pad_sequence(img_batch, padding_value=self.PAD_IDX).float()
+        ini_pos = torch.stack(ini_pos).float()
+        params_batch = pad_sequence(params_batch, padding_value=self.PAD_IDX).float()
+        is_next_batch = pad_sequence(is_next_batch, padding_value=self.PAD_IDX).long()
+        lens_batch = pad_sequence(lens_batch, padding_value=self.PAD_IDX).float()
+
+        return img_batch, ini_pos, params_batch, is_next_batch, lens_batch
+
     def __getitem__(self, idx):
 
         # get index for the lookup table
